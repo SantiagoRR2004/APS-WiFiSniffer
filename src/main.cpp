@@ -1,4 +1,4 @@
-#include <Arduino.h>
+//#include <Arduino.h>
 #include <M5Stack.h>
 
 // put function declarations here:
