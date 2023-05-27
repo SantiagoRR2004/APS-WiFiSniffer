@@ -1,11 +1,15 @@
 #include <Arduino.h>
+#include <M5Stack.h>
 
 // put function declarations here:
-int myFunction(int, int);
+
 
 void setup() {
   // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+  M5.begin();
+  M5.Lcd.setTextSize(3);
+  M5.Lcd.setTextColor(RED);
+  M5.Lcd.print("Hello world!");
 }
 
 void loop() {
@@ -13,6 +17,3 @@ void loop() {
 }
 
 // put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
-}
