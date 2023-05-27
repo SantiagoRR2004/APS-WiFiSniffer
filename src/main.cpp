@@ -1,14 +1,12 @@
-//#include <Arduino.h>
-#include <M5Stack.h>
-
-// put function declarations here:
-
+#include <M5StickCPlus.h>
 
 void setup() {
   // put your setup code here, to run once:
   M5.begin();
+  
   M5.Lcd.setTextSize(3);
-  M5.Lcd.setTextColor(RED);
+  M5.Lcd.setTextColor(MAGENTA);
+  M5.Lcd.setRotation(1);
   M5.Lcd.print("Hello world!");
 }
 
