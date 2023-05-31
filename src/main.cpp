@@ -77,8 +77,64 @@ void wifi_sniffer_init(void) {
 
 }
 
+void wifi_sniffer_set_channel(uint8_t channel) {
+
+  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  //sets the Wi-Fi channel for sniffing
+}
+
+const char * wifi_sniffer_packet_type2str(wifi_promiscuous_pkt_type_t type) {
+
+  switch (type) { //checks the packet type
+    case WIFI_PKT_MGMT: return "MGMT";
+    case WIFI_PKT_DATA: return "DATA";
+
+    default:
+    case WIFI_PKT_MISC: return "MISC";
+    //if the value is not recognized, the function returns the string "MISC"
+
+  }
+}
+
+void wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type) {
+
+  if (type != WIFI_PKT_MGMT)
+    // It checks if the packet type is not WIFI_PKT_MGMT
+    return;
+
+  const wifi_promiscuous_pkt_t *ppkt = (wifi_promiscuous_pkt_t *)buff;
+  //buff parameter to a pointer of type wifi_promiscuous_pkt_t* and assigns it to ppkt
+  const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)ppkt->payload;
+  //ppkt->payload to a pointer of type wifi_ieee80211_packet_t* and assigns it to ipkt. This provides access to the IEEE 802.11 packet structure
+  const wifi_ieee80211_mac_hdr_t *hdr = &ipkt->hdr;
+  //a pointer hdr of type wifi_ieee80211_mac_hdr_t* and assigns the address of ipkt->hdr to it. This allows access to the MAC header of the packet
 
 
+  // Print captured packets on serial monitor
+  Serial.printf("PACKET TYPE=%s, CHAN=%02d, RSSI=%02d,"
+         " ADDR1=%02x:%02x:%02x:%02x:%02x:%02x,"
+         " ADDR2=%02x:%02x:%02x:%02x:%02x:%02x,"
+         " ADDR3=%02x:%02x:%02x:%02x:%02x:%02x\n",
+
+         wifi_sniffer_packet_type2str(type),
+
+         ppkt->rx_ctrl.channel,
+         ppkt->rx_ctrl.rssi,
+
+         /* ADDR1 */
+         hdr->addr1[0], hdr->addr1[1], hdr->addr1[2],
+         hdr->addr1[3], hdr->addr1[4], hdr->addr1[5],
+
+         /* ADDR2 */
+         hdr->addr2[0], hdr->addr2[1], hdr->addr2[2],
+         hdr->addr2[3], hdr->addr2[4], hdr->addr2[5],
+
+         /* ADDR3 */
+         hdr->addr3[0], hdr->addr3[1], hdr->addr3[2],
+         hdr->addr3[3], hdr->addr3[4], hdr->addr3[5]
+
+        );
+}
 
 
 void setup() {
