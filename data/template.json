@@ -1,0 +1,25 @@
+{
+    "availability": [
+      {
+        "topic": "zigbee2mqtt/bridge/state"
+      }
+    ],
+    "device": {
+      "identifiers": [
+        "zigbee2mqtt_0x00158d0006f90b7f"
+      ],
+      "manufacturer": "Xiaomi",
+      "model": "Aqara temperature, humidity and pressure sensor (WSDCGQ11LM)",
+      "name": "sensor temperatura despacho",
+      "sw_version": "3000-0001"
+    },
+    "device_class": "pressure",
+    "enabled_by_default": true,
+    "json_attributes_topic": "zigbee2mqtt/sensor temperatura despacho",
+    "name": "sensor temperatura despacho pressure",
+    "state_class": "measurement",
+    "state_topic": "zigbee2mqtt/sensor temperatura despacho",
+    "unique_id": "0x00158d0006f90b7f_pressure_zigbee2mqtt",
+    "unit_of_measurement": "hPa",
+    "value_template": "{{ value_json.pressure }}"
+  }
