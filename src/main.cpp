@@ -109,7 +109,6 @@ void wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type) {
   const wifi_ieee80211_mac_hdr_t *hdr = &ipkt->hdr;
   //a pointer hdr of type wifi_ieee80211_mac_hdr_t* and assigns the address of ipkt->hdr to it. This allows access to the MAC header of the packet
 
-
   // Print captured packets on serial monitor
   Serial.printf("PACKET TYPE=%s, CHAN=%02d, RSSI=%02d,"
          " ADDR1=%02x:%02x:%02x:%02x:%02x:%02x,"
@@ -140,15 +139,28 @@ void wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type) {
 void setup() {
   // put your setup code here, to run once:
   M5.begin();
+  M5.Lcd.setRotation(0);
+  M5.Lcd.fillScreen(BLACK);
+  M5.Lcd.setTextColor(RED);
+  M5.Lcd.setTextSize(1); 
+  M5.Lcd.setCursor(0, 0);
+  // LCD display print
+  M5.Lcd.printf("HOLA:%2.1f%%", 2.3);
+  M5.Lcd.print("Wifi Sniffer\n Init...\n\n");
   
-  M5.Lcd.setTextSize(3);
-  M5.Lcd.setTextColor(MAGENTA);
-  M5.Lcd.setRotation(1);
-  M5.Lcd.print("Hello world!");
+  // To allow print on serial monitor
+  Serial.begin(115200);
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+
+  vTaskDelay(WIFI_CHANNEL_SWITCH_INTERVAL / portTICK_PERIOD_MS); //Tiempo de retraso
+  wifi_sniffer_set_channel(channel);
+  channel = (channel % WIFI_CHANNEL_MAX) + 1; //Encontramos el siguiente canal
+
+  M5.Lcd.print(channel);
+
 }
 
-// put function definitions here:
