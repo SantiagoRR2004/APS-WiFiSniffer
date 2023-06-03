@@ -7,7 +7,7 @@
 
 // Constants
 //Cada vez que se encuentran las cadenas se sustituyen por el número
-#define WIFI_CHANNEL_SWITCH_INTERVAL  (500) // Interval between channel switches (in milliseconds)
+#define WIFI_CHANNEL_SWITCH_INTERVAL  (20000) // Interval between channel switches (in milliseconds)
 #define WIFI_CHANNEL_MAX               (13) // Maximum WiFi channel number
 #define MAX_MAC_ADDRESSES (100)
 
