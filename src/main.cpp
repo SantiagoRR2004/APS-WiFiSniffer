@@ -4,13 +4,22 @@
 #include "esp_system.h"      // ESP32 system library
 #include "esp_event.h"       // ESP32 event library
 #include "esp_event_loop.h"  // ESP32 event loop library
+#include <PubSubClient.h>
+#include <WiFi.h>
+
 
 // Constants
 //Cada vez que se encuentran las cadenas se sustituyen por el número
 #define WIFI_CHANNEL_SWITCH_INTERVAL  (20000) // Interval between channel switches (in milliseconds)
 #define WIFI_CHANNEL_MAX               (13) // Maximum WiFi channel number
 #define MAX_MAC_ADDRESSES (100)
+const char* ssid = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+const char* password = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+const char* mqttServer = "your.mosquitto.server";
+const int mqttPort = 1883;  // Default MQTT port is 1883
 
+WiFiClient wifiClient;
+PubSubClient mqttClient(wifiClient);
 static uint8_t numAddresses = 0;
 static char macAddresses[MAX_MAC_ADDRESSES][18];  // Array to store MAC addresses
 static uint8_t channelNumbers[MAX_MAC_ADDRESSES]; // Array to store channel numbers
@@ -180,6 +189,9 @@ void wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type) {
   }
 }
 
+void callback(char* topic, byte* payload, unsigned int length) {
+  // Handle incoming messages here
+}
 
 void setup() {
   // put your setup code here, to run once:
@@ -188,13 +200,27 @@ void setup() {
   M5.Lcd.fillScreen(BLACK);   // Fill the screen with black color
   M5.Lcd.setTextColor(GREEN); // Set the text color to green
   M5.Lcd.setTextSize(1);
+  M5.Lcd.setCursor(0, 128);
 
   Serial.begin(115200); // Initialize the Serial communication
 
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    M5.Lcd.print(WiFi.status()); // Needs to print 3
+  }
+
+  M5.Lcd.printf("");
+  M5.Lcd.printf("WiFi connected");
+  M5.Lcd.printf("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  mqttClient.setServer(mqttServer, mqttPort);
+  mqttClient.setCallback(callback);
+
   wifi_sniffer_init(); // Initialize the WiFi sniffer
 
-
-  M5.Lcd.setCursor(0, 128);
   // LCD display print
   M5.Lcd.printf("Current Channel: %d", channel); // Display current channel
 }
