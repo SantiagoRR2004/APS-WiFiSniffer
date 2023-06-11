@@ -4,6 +4,7 @@
 #include "esp_system.h"      // ESP32 system library
 #include "esp_event.h"       // ESP32 event library
 #include "esp_event_loop.h"  // ESP32 event loop library
+#include "mqttClient.h"
 
 // Constants
 //Cada vez que se encuentran las cadenas se sustituyen por el número
