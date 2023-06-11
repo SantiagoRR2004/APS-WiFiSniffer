@@ -15,7 +15,7 @@
 #define MAX_MAC_ADDRESSES (100)
 const char* ssid = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
 const char* password = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-const char* mqttServer = "your.mosquitto.server";
+const char* mqttServer = "mqtt://aps2023.is-a-student.com";
 const int mqttPort = 1883;  // Default MQTT port is 1883
 
 WiFiClient wifiClient;
@@ -227,6 +227,12 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+
+  mqttClient.loop();
+
+  String message = "Hello, Mosquitto!"; // Your message here
+  mqttClient.publish("topic", message.c_str());
+
 
   vTaskDelay(WIFI_CHANNEL_SWITCH_INTERVAL / portTICK_PERIOD_MS); //Tiempo de retraso
   channel++;
