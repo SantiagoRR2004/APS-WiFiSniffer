@@ -6,43 +6,6 @@
 // vTaskDelay
 
 
-
-void connectToWiFi() {
-  if (!WiFi.isConnected()) {
-    WiFi.begin(ssid, password);
-
-    while (!WiFi.isConnected()) {
-      delay(500);
-      Serial.print(".");
-    }
-
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-  }
-  else{
-    Serial.println("WiFi already connected");
-  }
-}
-
-
-void connectToMQTT() {
-  mqttClient.setServer(mqttServer, mqttPort);
-  
-  while (!mqttClient.connected()) {
-    if (mqttClient.connect(mqttClientId, "aps_grupo_q", "EuMCYrjE")) {
-      Serial.println("MQTT connected");
-    } else {
-      Serial.print("MQTT connection failed, rc= ");
-      Serial.print(mqttClient.state());
-      Serial.println("Retrying...");
-      delay(2000);
-    }
-  }
-}
-
-
 void wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type) {
 
   if (enablePacketHandling) {
