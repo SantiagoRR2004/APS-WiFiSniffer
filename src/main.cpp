@@ -8,7 +8,6 @@
 #include <WiFi.h>
 #include <stdio.h>
 
-
 // Constants
 //Cada vez que se encuentran las cadenas se sustituyen por el número
 #define WIFI_CHANNEL_SWITCH_INTERVAL  (500) // Interval between channel switches (in milliseconds)
@@ -25,6 +24,10 @@ const char* mqttServer = "aps2023.is-a-student.com";
 const int mqttPort = 1883;  // Default MQTT port is 1883
 const char* mqttClientId = "m5stick";
 int j = 1;
+
+// Intervalo de tiempo para el escaneo y envío de datos (en milisegundos)
+// Creo que ya no lo uso
+const unsigned long interval = 5000;  // 5 segundos
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -78,6 +81,7 @@ typedef struct {
 } wifi_ieee80211_packet_t;
 
 
+
 // En el siguiente código se crean funciones pero no se definen lo que hacen
 
 // Event handler for system events
@@ -128,7 +132,7 @@ void wifi_sniffer_init(void) {
   //This starts the Wi-Fi interface
   esp_wifi_set_promiscuous(true);                              // Enable promiscuous mode
   //This enables promiscuous mode on the Wi-Fi interface to capture all packets
-  esp_wifi_set_promiscuous_rx_cb(wifi_sniffer_packet_handler); // Set the callback for WiFi packet handling
+  esp_wifi_set_promiscuous_rx_cb(&wifi_sniffer_packet_handler); // Set the callback for WiFi packet handling
   //This sets the callback function wifi_sniffer_packet_handler to handle received packets in promiscuous mode
 
 }
