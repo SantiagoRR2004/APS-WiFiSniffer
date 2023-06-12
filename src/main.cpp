@@ -6,23 +6,17 @@
 #include "esp_event_loop.h"  // ESP32 event loop library
 #include <PubSubClient.h>
 #include <WiFi.h>
-#include <stdio.h>
+
 
 // Constants
 //Cada vez que se encuentran las cadenas se sustituyen por el número
 #define WIFI_CHANNEL_SWITCH_INTERVAL  (20000) // Interval between channel switches (in milliseconds)
 #define WIFI_CHANNEL_MAX               (13) // Maximum WiFi channel number
 #define MAX_MAC_ADDRESSES (100)
-
-// Configuración de la red WiFi
 const char* ssid = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
 const char* password = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-
-// Configuración del servidor MQTT
 const char* mqttServer = "aps2023.is-a-student.com";
 const int mqttPort = 1883;  // Default MQTT port is 1883
-const char* mqttClientId = "m5stick";
-int j = 1;
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -107,7 +101,7 @@ void wifi_sniffer_init(void) {
   //This starts the Wi-Fi interface
   esp_wifi_set_promiscuous(true);                              // Enable promiscuous mode
   //This enables promiscuous mode on the Wi-Fi interface to capture all packets
-  esp_wifi_set_promiscuous_rx_cb(&wifi_sniffer_packet_handler); // Set the callback for WiFi packet handling
+  esp_wifi_set_promiscuous_rx_cb(wifi_sniffer_packet_handler); // Set the callback for WiFi packet handling
   //This sets the callback function wifi_sniffer_packet_handler to handle received packets in promiscuous mode
 
 }
