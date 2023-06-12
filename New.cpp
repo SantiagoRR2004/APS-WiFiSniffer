@@ -16,8 +16,8 @@
 #include "esp_event_loop.h"
 
 // Configuración de la red WiFi
-const char* ssid = "XXXXXXXXXXXXXXXXXXXXXX";
-const char* password = "XXXXXXXXXXXXXXXXXXXXXX";
+const char* ssid = "XXXXXXXXXXXXXX";
+const char* password = "XXXXXXXXXXXXXXXX";
 
 // Configuración del servidor MQTT
 const char* mqttServer = "aps2023.is-a-student.com";

@@ -6,20 +6,39 @@
 #include "esp_event_loop.h"  // ESP32 event loop library
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <stdio.h>
 
 
 // Constants
 //Cada vez que se encuentran las cadenas se sustituyen por el número
-#define WIFI_CHANNEL_SWITCH_INTERVAL  (20000) // Interval between channel switches (in milliseconds)
+#define WIFI_CHANNEL_SWITCH_INTERVAL  (500) // Interval between channel switches (in milliseconds)
 #define WIFI_CHANNEL_MAX               (13) // Maximum WiFi channel number
 #define MAX_MAC_ADDRESSES (100)
-const char* ssid = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-const char* password = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+
+// Configuración de la red WiFi
+const char* ssid = "XXXXXXXXXXXXXX";
+const char* password = "XXXXXXXXXXXXXXXX";
+
+// Configuración del servidor MQTT
+
 const char* mqttServer = "aps2023.is-a-student.com";
 const int mqttPort = 1883;  // Default MQTT port is 1883
+const char* mqttClientId = "m5stick";
+int j = 1;
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
+
+// Array para guardar MACs y RSIIs
+char data[10000];
+int i = 0; 
+
+bool enablePacketHandling = true;
+
+unsigned long tiempoEspera = WIFI_CHANNEL_SWITCH_INTERVAL / portTICK_PERIOD_MS;
+unsigned long tiempoInicio = 0;
+
+
 static uint8_t numAddresses = 0;
 static char macAddresses[MAX_MAC_ADDRESSES][18];  // Array to store MAC addresses
 static uint8_t channelNumbers[MAX_MAC_ADDRESSES]; // Array to store channel numbers
@@ -49,6 +68,14 @@ typedef struct { //Crea otra estructura.
   uint8_t payload[0]; /* network data ended with 4 bytes csum (CRC32) */ // Packet payload
 
 } __attribute__((packed)) wifi_ieee80211_packet_t;
+
+typedef struct {
+
+  wifi_ieee80211_mac_hdr_t hdr;
+
+  uint8_t payload[0]; /* network data ended with 4 bytes csum (CRC32) */
+
+} wifi_ieee80211_packet_t;
 
 
 // En el siguiente código se crean funciones pero no se definen lo que hacen
