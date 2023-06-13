@@ -15,8 +15,8 @@
 #define MAX_MAC_ADDRESSES (100)
 
 // Configuración de la red WiFi
-const char* ssid = "XXXXXXXXXXXXXX";
-const char* password = "XXXXXXXXXXXXXXXX";
+const char* ssid = "Mirar al Cielo Nos Fumigan";
+const char* password = "barandelainutil";
 
 // Configuración del servidor MQTT
 
@@ -194,57 +194,35 @@ const char * wifi_sniffer_packet_type2str(wifi_promiscuous_pkt_type_t type) {
 // Callback function for WiFi packet handling
 void wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type) {
 
-  if (type != WIFI_PKT_MGMT)
-    // It checks if the packet type is not WIFI_PKT_MGMT
-    return;
+  if (enablePacketHandling) {
 
-  const wifi_promiscuous_pkt_t *ppkt = (wifi_promiscuous_pkt_t *)buff;            // Get the WiFi packet
-  //buff parameter to a pointer of type wifi_promiscuous_pkt_t* and assigns it to ppkt
-  const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)ppkt->payload; // Get the IEEE80211 packet
-  //ppkt->payload to a pointer of type wifi_ieee80211_packet_t* and assigns it to ipkt. This provides access to the IEEE 802.11 packet structure
-  const wifi_ieee80211_mac_hdr_t *hdr = &ipkt->hdr;
-  //a pointer hdr of type wifi_ieee80211_mac_hdr_t* and assigns the address of ipkt->hdr to it. This allows access to the MAC header of the packet
+    const wifi_promiscuous_pkt_t *ppkt = (wifi_promiscuous_pkt_t *)buff;
 
-  char mac1[18];
-  sprintf(mac1, "%02X:%02X:%02X:%02X:%02X:%02X", hdr->addr1[0], hdr->addr1[1], hdr->addr1[2], hdr->addr1[3], hdr->addr1[4], hdr->addr1[5]);
+    const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)ppkt->payload;
 
-  char mac2[18];
-  sprintf(mac2, "%02X:%02X:%02X:%02X:%02X:%02X", hdr->addr2[0], hdr->addr2[1], hdr->addr2[2], hdr->addr2[3], hdr->addr2[4], hdr->addr2[5]);
+    const wifi_ieee80211_mac_hdr_t *hdr = &ipkt->hdr;
+    
+    char macAddress[18];
+    sprintf(macAddress, "%02X:%02X:%02X:%02X:%02X:%02X", hdr->addr2[0], hdr->addr2[1], hdr->addr2[2], hdr->addr2[3], hdr->addr2[4], hdr->addr2[5]);
+    
+    int rssi = ppkt->rx_ctrl.rssi;
+    
+    char payload[100];
+    sprintf(payload, "{\"channel\":%d,\"mac\":\"%s\",\"rssi\":%d}", channel, macAddress, rssi);
 
-  /**/ // COMMENT THIS SECTION FOR NO FILTERING. NOT RECOMMENDED!!!! DEVICE RUNNING OUT OF MEMORY
-  for (int i = 0; i < numAddresses; i++)
-  {
-    // if (strcmp(mac1, macAddresses[i]) == 0 || strcmp(mac2, macAddresses[i]) == 0) // STRICT FILTER. MOST PACKETS ARE LOST AND ONLY SOME USERS ARE SHOWN. MOST READABLE. FOR TESTING PURPOSES ONLY
-    if (strcmp(mac2, macAddresses[i]) == 0) // SOFT FILTER. MOST PACKETS ARE LOST, BUT ALL CLIENTS ARE SHOWN. REOMMENDED MODE.
-    {
-      return; // Skip duplicate MAC addresses
+    if (strlen(data) != 0) {
+      strcat(data, ",");
     }
-  }
-  /**/ // NO FILTERING
 
-  strcpy(macAddresses[numAddresses], mac1); // Store the RX MAC address
-  numAddresses++;
-  strcpy(macAddresses[numAddresses], mac2); // Store the TX MAC address
-  numAddresses++;
+    strcpy(data, payload);
 
-  static int line = 0;
-  M5.Lcd.setCursor(0, line * 8);
-  M5.Lcd.printf("A1RX:%s CH:%d RSSI:%ddBm\n", mac1, ppkt->rx_ctrl.channel, ppkt->rx_ctrl.rssi); // Display MAC address, channel, and signal level
-  line++;
-
-  M5.Lcd.setCursor(0, line * 8);
-  M5.Lcd.printf("A2TX:%s CH:%d RSSI:%ddBm\n", mac2, ppkt->rx_ctrl.channel, ppkt->rx_ctrl.rssi); // Display MAC address, channel, and signal level
-  line++;
-
-  if (line >= 16)
-  {
-    M5.Lcd.fillScreen(BLACK); // Clear the screen if it exceeds 16 lines
-    M5.Lcd.fillRect(0, 128, 300, 80, BLACK);
-    M5.Lcd.setCursor(0, 128);
-    M5.Lcd.printf("Current Channel: %d", channel); // Display current channel
-    line = 0;
+    i = i+1;
+    
+    Serial.printf("Channel: %d, MAC: %s, RSSI: %d\n", channel, macAddress, rssi);
+    Serial.println(i);
   }
 }
+
 
 void callback(char* topic, byte* payload, unsigned int length) {
   // Handle incoming messages here
@@ -287,20 +265,68 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  if (i >= 10){
+    Serial.println("Entré al if");
+    // Booleano para que si encuentra un paquete no haga nada hasta tener la configuración necesaria.
+    
+    enablePacketHandling = false;
+    //Desactivar la configuración anterior para poder concectarse a MQTT
+    tcpip_adapter_init();
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
+    ESP_ERROR_CHECK( esp_wifi_start() );
 
-  mqttClient.loop();
+    Serial.println("Procedo a conectar");
 
-  String message = "Hello, Mosquitto!"; // Your message here
-  mqttClient.publish("topic", message.c_str());
+    connectToWiFi();
+    connectToMQTT();
+    
+    Serial.println("Hasta aquí llego");
+    char mqttTopic[30];
+    sprintf(mqttTopic, "aps2023/Proyecto7/datos%d", j);
+    j = j+1;
 
+    mqttClient.publish(mqttTopic, data);
+    Serial.println(data);
+    
+    char data[1000];
+    Serial.println(data);
+    i = 0;
 
-  vTaskDelay(WIFI_CHANNEL_SWITCH_INTERVAL / portTICK_PERIOD_MS); //Tiempo de retraso
-  channel++;
-  if (channel > WIFI_CHANNEL_MAX)
-  {
-    channel = 1;
+    delay(5000);
+    Serial.println(data);
+    // Start sniffer again
+    tcpip_adapter_init();
+
+    cfg = WIFI_INIT_CONFIG_DEFAULT();
+
+    ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
+
+    ESP_ERROR_CHECK( esp_wifi_set_country(&wifi_country) ); // set country for channel range [1, 13]
+
+    ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
+
+    ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_NULL) );
+
+    ESP_ERROR_CHECK( esp_wifi_start() );
+
+    esp_wifi_set_promiscuous(true);
+    
+    enablePacketHandling = true;
+
   }
-  wifi_sniffer_set_channel(channel);
+
+  // Comprobar el temporizador para el retraso
+  unsigned long tiempoActual = xTaskGetTickCount();
+  if (tiempoActual - tiempoInicio >= tiempoEspera) {
+    // Acciones a realizar después de transcurrido el tiempo de espera
+    wifi_sniffer_set_channel(channel);
+
+    channel = (channel % WIFI_CHANNEL_MAX) + 1;
+    
+    // Reiniciar el temporizador
+    tiempoInicio = xTaskGetTickCount();
+  }
+
 }
 
