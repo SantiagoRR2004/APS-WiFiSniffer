@@ -17,8 +17,8 @@ String deviceId;
 
 
 // Configuración de la red WiFi
-const char* ssid = "Mirar al Cielo Nos Fumigan";
-const char* password = "barandelainutil";
+const char* ssid = "XXXXXXXXXXXXXX";
+const char* password = "XXXXXXXXXXXXXX";
 
 
 // Configuración del servidor MQTT
@@ -43,7 +43,7 @@ bool enablePacketHandling = true;
 unsigned long tiempoEspera = WIFI_CHANNEL_SWITCH_INTERVAL / portTICK_PERIOD_MS;
 unsigned long tiempoInicio = 0;
 
-
+static uint32_t chipId = ESP.getEfuseMac();
 static uint8_t numAddresses = 0;
 static char macAddresses[MAX_MAC_ADDRESSES][18];  // Array to store MAC addresses
 static uint8_t channelNumbers[MAX_MAC_ADDRESSES]; // Array to store channel numbers
@@ -292,9 +292,10 @@ void loop() {
     connectToMQTT();
     
     Serial.println("Hasta aquí llego");
-    char mqttTopic[50];
-    sprintf(mqttTopic, "aps2023/Proyecto7/%d/datos%d", deviceId, j);
+    char mqttTopic[70];
 
+    sprintf(mqttTopic, "aps2023/Proyecto7/%lu%lu/datos%d", chipId, deviceId, j);
+    Serial.println(mqttTopic);
     j = j+1;
 
     mqttClient.publish(mqttTopic, data);
