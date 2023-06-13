@@ -13,13 +13,15 @@
 #define WIFI_CHANNEL_SWITCH_INTERVAL  (500) // Interval between channel switches (in milliseconds)
 #define WIFI_CHANNEL_MAX               (13) // Maximum WiFi channel number
 #define MAX_MAC_ADDRESSES (100)
+String deviceId;
+
 
 // Configuración de la red WiFi
 const char* ssid = "Mirar al Cielo Nos Fumigan";
 const char* password = "barandelainutil";
 
-// Configuración del servidor MQTT
 
+// Configuración del servidor MQTT
 const char* mqttServer = "aps2023.is-a-student.com";
 const int mqttPort = 1883;  // Default MQTT port is 1883
 const char* mqttClientId = "m5stick";
@@ -262,6 +264,14 @@ void setup() {
 
   // LCD display print
   M5.Lcd.printf("Current Channel: %d", channel); // Display current channel
+
+  uint8_t mac[6];
+  char macStr[18];
+  WiFi.macAddress(mac);
+  snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
+           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  deviceId = macStr;
+
 }
 
 void loop() {
@@ -282,8 +292,9 @@ void loop() {
     connectToMQTT();
     
     Serial.println("Hasta aquí llego");
-    char mqttTopic[30];
-    sprintf(mqttTopic, "aps2023/Proyecto7/datos%d", j);
+    char mqttTopic[50];
+    sprintf(mqttTopic, "aps2023/Proyecto7/%d/datos%d", deviceId, j);
+
     j = j+1;
 
     mqttClient.publish(mqttTopic, data);
