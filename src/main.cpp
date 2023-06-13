@@ -258,6 +258,9 @@ void setup() {
   M5.Lcd.setTextColor(GREEN); // Set the text color to green
   M5.Lcd.setTextSize(1);
   M5.Lcd.setCursor(0, 128);
+  // LCD display print
+  M5.Lcd.printf("HOLA:%2.1f%%", 2.3);
+  M5.Lcd.print("Wifi Sniffer\n Init...\n\n");
 
   Serial.begin(115200); // Initialize the Serial communication
 
@@ -277,6 +280,7 @@ void setup() {
   mqttClient.setCallback(callback);
 
   wifi_sniffer_init(); // Initialize the WiFi sniffer
+  M5.Lcd.print("Wifi Sniffer\n Running...");
 
   // LCD display print
   M5.Lcd.printf("Current Channel: %d", channel); // Display current channel

@@ -73,37 +73,7 @@ void wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type) {
   }
 }
 
-// the setup function runs once when you press reset or power the board
 
-void setup() {
-  
-  // Initialize the M5StickC object
-  M5.begin();
-  M5.Lcd.setRotation(1);
-  M5.Lcd.fillScreen(BLACK);
-  M5.Lcd.setTextColor(GREEN);
-  M5.Lcd.setTextSize(1); 
-  M5.Lcd.setCursor(0, 128);
-  // LCD display print
-  M5.Lcd.printf("HOLA:%2.1f%%", 2.3);
-  M5.Lcd.print("Wifi Sniffer\n Init...\n\n");
-  
-  // To allow print on serial monitor
-  Serial.begin(115200);
-  
-  delay(10);
-
-  // Start sniffer
-
-  delay(5000);
-  wifi_sniffer_init();
-
-  // LCD display print
-  M5.Lcd.print("Wifi Sniffer\n Running...");
-  
-}
-
-// the loop function runs over and over again forever
 
 void loop() {
 
