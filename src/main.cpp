@@ -13,12 +13,11 @@
 #define WIFI_CHANNEL_SWITCH_INTERVAL  (500) // Interval between channel switches (in milliseconds)
 #define WIFI_CHANNEL_MAX               (13) // Maximum WiFi channel number
 #define MAX_MAC_ADDRESSES (100)
-String deviceId;
 
 
 // Configuración de la red WiFi
-const char* ssid = "XXXXXXXXXXXXXX";
-const char* password = "XXXXXXXXXXXXXX";
+const char* ssid = "XXXXXXXXXXXXXXXX";
+const char* password = "XXXXXXXXXXXXXXX";
 
 
 // Configuración del servidor MQTT
@@ -43,7 +42,7 @@ bool enablePacketHandling = true;
 unsigned long tiempoEspera = WIFI_CHANNEL_SWITCH_INTERVAL / portTICK_PERIOD_MS;
 unsigned long tiempoInicio = 0;
 
-static uint32_t chipId = ESP.getEfuseMac();
+static uint64_t chipId = ESP.getEfuseMac();
 static uint8_t numAddresses = 0;
 static char macAddresses[MAX_MAC_ADDRESSES][18];  // Array to store MAC addresses
 static uint8_t channelNumbers[MAX_MAC_ADDRESSES]; // Array to store channel numbers
@@ -265,13 +264,6 @@ void setup() {
   // LCD display print
   M5.Lcd.printf("Current Channel: %d", channel); // Display current channel
 
-  uint8_t mac[6];
-  char macStr[18];
-  WiFi.macAddress(mac);
-  snprintf(macStr, sizeof(macStr), "%02X:%02X:%02X:%02X:%02X:%02X",
-           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-  deviceId = macStr;
-
 }
 
 void loop() {
@@ -293,8 +285,7 @@ void loop() {
     
     Serial.println("Hasta aquí llego");
     char mqttTopic[70];
-
-    sprintf(mqttTopic, "aps2023/Proyecto7/%lu%lu/datos%d", chipId, deviceId, j);
+    sprintf(mqttTopic, "aps2023/Proyecto7/%llu/datos%d", chipId, j);
     Serial.println(mqttTopic);
     j = j+1;
 
