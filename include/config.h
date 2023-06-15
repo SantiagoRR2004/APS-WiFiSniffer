@@ -1,10 +1,13 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
 #define STRING_LEN 128
 //-- datos wifi ap configuración
-const char apWifiName[] = "gateway_ha";
-const char wifiInitialApPassword[] = "12345678";
+const char apWifiName[] = "Redmi Note 12";
+const char wifiInitialApPassword[] = "ad2fd34037a6";
 //-- VARIABLES DE LOS PARAMETROS A CONFIGURAR
-char mqttServerValue[STRING_LEN] = "aps2023.is-a-student";
-char mqttServerPortValue[STRING_LEN] = "2883";
+char mqttServerValue[STRING_LEN] = "aps2023.is-a-student.com";
+const int mqttServerPortValue = 2883;
 char mqttUserNameValue[STRING_LEN] = "admin";
 char mqttUserPasswordValue[STRING_LEN] = "admin";
 char mqttTopicValue[STRING_LEN] = "aps2023/Proyecto7";
@@ -24,3 +27,5 @@ char delaySendingDataValue[STRING_LEN];
 
 String MAC;
 byte chipMAC[6]; 
+
+#endif
