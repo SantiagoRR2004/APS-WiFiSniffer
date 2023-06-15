@@ -1,335 +1,427 @@
-#include <M5StickCPlus.h>    // M5StickC Plus library for the ESP32-based development board
-#include "esp_wifi.h"        // ESP32 WiFi library
-#include "esp_wifi_types.h"  // ESP32 WiFi types
-#include "esp_system.h"      // ESP32 system library
-#include "esp_event.h"       // ESP32 event library
-#include "esp_event_loop.h"  // ESP32 event loop library
-#include <PubSubClient.h>
+#include <M5StickCPlus.h>   // M5StickC Plus library for the ESP32-based development board
+#include "esp_wifi.h"       // ESP32 WiFi library
+#include "esp_wifi_types.h" // ESP32 WiFi types
+#include "esp_system.h"     // ESP32 system library
+#include "esp_event.h"      // ESP32 event library
+#include "esp_event_loop.h" // ESP32 event loop library
+#include "config.h"         // MQTT setup parameters and config
+#include <ArduinoJson.h>
 #include <WiFi.h>
-#include <stdio.h>
+#include <PubSubClient.h>
+#include "esp_task_wdt.h" // WatchDog Library
 
 // Constants
-//Cada vez que se encuentran las cadenas se sustituyen por el número
-#define WIFI_CHANNEL_SWITCH_INTERVAL  (500) // Interval between channel switches (in milliseconds)
-#define WIFI_CHANNEL_MAX               (13) // Maximum WiFi channel number
-#define MAX_MAC_ADDRESSES (100)
+#define WIFI_CHANNEL_SWITCH_INTERVAL (10000) // Interval between channel switches (in milliseconds)
+#define WIFI_CHANNEL_MAX (13)               // Maximum WiFi channel number
+#define MAX_MAC_ADDRESSES (250)
 
+#define WDT_TIMEOUT (59) // WatchDog Timeout in Seconds
 
-// Configuración de la red WiFi
-const char* ssid = "XXXXXXXXXXXXXXXX";
-const char* password = "XXXXXXXXXXXXXXX";
+//// MQTT CONSTANTS
+const char *mqttRebootTopic = "aps2023/Proyecto7/remote_control/x"; // x = num_dispositivo
+const char *mqttRebootCommand = "reboot";
 
-
-// Configuración del servidor MQTT
-const char* mqttServer = "aps2023.is-a-student.com";
-const int mqttPort = 1883;  // Default MQTT port is 1883
-const char* mqttClientId = "m5stick";
-int j = 1;
-
-// Intervalo de tiempo para el escaneo y envío de datos (en milisegundos)
-// Creo que ya no lo uso
-const unsigned long interval = 5000;  // 5 segundos
-
-WiFiClient wifiClient;
-PubSubClient mqttClient(wifiClient);
-
-// Array para guardar MACs y RSIIs
-char data[10000];
-int i = 0; 
-
-bool enablePacketHandling = true;
-
-unsigned long tiempoEspera = WIFI_CHANNEL_SWITCH_INTERVAL / portTICK_PERIOD_MS;
-unsigned long tiempoInicio = 0;
-
-static uint64_t chipId = ESP.getEfuseMac();
 static uint8_t numAddresses = 0;
-static char macAddresses[MAX_MAC_ADDRESSES][18];  // Array to store MAC addresses
-static uint8_t channelNumbers[MAX_MAC_ADDRESSES]; // Array to store channel numbers
-static int8_t signalLevels[MAX_MAC_ADDRESSES];    // Array to store signal levels
+static char macAddresses[MAX_MAC_ADDRESSES][18] = {0};  // Array to store MAC addresses
+static uint8_t channelNumbers[MAX_MAC_ADDRESSES] = {0}; // Array to store channel numbers
+static int8_t signalLevels[MAX_MAC_ADDRESSES] = {0};    // Array to store signal levels
 
-uint8_t level = 0, channel = 1; // Crea 2 variables de un bit
+uint8_t level = 0, channel = 1;
 
-static wifi_country_t wifi_country = {.cc = "CN", .schan = 1, .nchan = 13}; /** @brief Structure describing WiFi country-based regional restrictions. */
+bool lcdOn = false;
+
+DynamicJsonDocument jsonDocument(JSON_OBJECT_SIZE(1) + MAX_MAC_ADDRESSES * JSON_OBJECT_SIZE(3));
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+static wifi_country_t wifi_country = {.cc = "ES", .schan = 1, .nchan = 13}; // Set the country code to Spain
 
 // Data structures for parsing WiFi packets
-typedef struct { //Esto crea una estructura con la distinta información en su interior. Parecido a un objeto de una clase.
-
-  unsigned frame_ctrl: 16;   // Frame control field
-  unsigned duration_id: 16;  // Duration/ID field
-  uint8_t addr1[6]; /* receiver address */  // MAC address 1
-  uint8_t addr2[6]; /* sender address */    // MAC address 2
-  uint8_t addr3[6]; /* filtering address */ // MAC address 3
-  unsigned sequence_ctrl: 16;               // Sequence control field
-  uint8_t addr4[6]; /* optional */          // MAC address 4
-
+typedef struct
+{
+  unsigned frame_ctrl : 16;    // Frame control field
+  unsigned duration_id : 16;   // Duration/ID field
+  uint8_t addr1[6];            // MAC address 1
+  uint8_t addr2[6];            // MAC address 2
+  uint8_t addr3[6];            // MAC address 3
+  unsigned sequence_ctrl : 16; // Sequence control field
+  uint8_t addr4[6];            // MAC address 4
 } __attribute__((packed)) wifi_ieee80211_mac_hdr_t;
 
-
-typedef struct { //Crea otra estructura.
-
+typedef struct
+{
   wifi_ieee80211_mac_hdr_t hdr; // MAC header
-  uint8_t payload[0]; /* network data ended with 4 bytes csum (CRC32) */ // Packet payload
-
+  uint8_t payload[0];           // Packet payload
 } __attribute__((packed)) wifi_ieee80211_packet_t;
-
-
-// En el siguiente código se crean funciones pero no se definen lo que hacen
 
 // Event handler for system events
 static esp_err_t event_handler(void *ctx, system_event_t *event);
-//event_handler function is expected to handle events of type system_event_t and return an esp_err_t error code. The ctx parameter can be used to pass additional context data
 
 // Function to initialize WiFi sniffer
 static void wifi_sniffer_init(void);
-//wifi_sniffer_init function is responsible for initializing the Wi-Fi sniffer
 
 // Function to set WiFi channel for sniffing
 static void wifi_sniffer_set_channel(uint8_t channel);
-//wifi_sniffer_set_channel function is responsible for setting the Wi-Fi channel to be used for sniffing
 
 // Function to convert WiFi packet type to string
 static const char *wifi_sniffer_packet_type2str(wifi_promiscuous_pkt_type_t type);
-// wifi_sniffer_packet_type2str function is responsible for converting a wifi_promiscuous_pkt_type_t packet type to a string representation
 
 // Callback function for WiFi packet handling
 static void wifi_sniffer_packet_handler(void *buff, wifi_promiscuous_pkt_type_t type);
-//wifi_sniffer_packet_handler function is a callback function that handles incoming packets captured by a Wi-Fi sniffer. It takes a pointer to the packet data buffer (buff) and the packet type (type) as input parameters
 
-// Ahora definimos lo que hacen las anteriores funciones
+// Callback function from MQTT
+void handleMqttMessage(char *topic, byte *payload, unsigned int length);
 
 // Event handler for system events
-esp_err_t event_handler(void *ctx, system_event_t *event) {
-  return ESP_OK; //returns ESP_OK, which indicates that the event handling was successful
+esp_err_t event_handler(void *ctx, system_event_t *event)
+{
+  return ESP_OK;
 }
 
 // Function to initialize WiFi sniffer
-void wifi_sniffer_init(void) {
-
+void wifi_sniffer_init(void)
+{
   tcpip_adapter_init();                                      // Initialize the TCP/IP adapter
-  //This function initializes the TCP/IP adapter stack for network communication
   ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL)); // Initialize the event loop
-  //This initializes the event loop and registers the event_handler function to handle system events.
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  // This initializes a Wi-Fi configuration structure with default values.
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));                        // Initialize the WiFi driver
-  //This initializes the Wi-Fi driver with the provided configuration.
   ESP_ERROR_CHECK(esp_wifi_set_country(&wifi_country));        // Set the WiFi country to Spain
-  /* set country for channel range [1, 13] */
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));     // Set WiFi storage to RAM
-  //This sets the Wi-Fi storage type to be used.
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));          // Set WiFi mode to NULL mode
-  //his sets the Wi-Fi mode to WIFI_MODE_NULL, which means that the Wi-Fi interface is initialized but not connected to any network
   ESP_ERROR_CHECK(esp_wifi_start());                           // Start WiFi
-  //This starts the Wi-Fi interface
   esp_wifi_set_promiscuous(true);                              // Enable promiscuous mode
-  //This enables promiscuous mode on the Wi-Fi interface to capture all packets
-  esp_wifi_set_promiscuous_rx_cb(&wifi_sniffer_packet_handler); // Set the callback for WiFi packet handling
-  //This sets the callback function wifi_sniffer_packet_handler to handle received packets in promiscuous mode
-
+  esp_wifi_set_promiscuous_rx_cb(wifi_sniffer_packet_handler); // Set the callback for WiFi packet handling
 }
-
-void connectToWiFi() {
-  if (!WiFi.isConnected()) {
-    WiFi.begin(ssid, password);
-
-    while (!WiFi.isConnected()) {
-      delay(500);
-      Serial.print(".");
-    }
-
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-  }
-  else{
-    Serial.println("WiFi already connected");
-  }
-}
-
-void connectToMQTT() {
-  mqttClient.setServer(mqttServer, mqttPort);
-  
-  while (!mqttClient.connected()) {
-    if (mqttClient.connect(mqttClientId, "aps_grupo_q", "EuMCYrjE")) {
-      Serial.println("MQTT connected");
-    } else {
-      Serial.print("MQTT connection failed, rc= ");
-      Serial.print(mqttClient.state());
-      Serial.println("Retrying...");
-      delay(2000);
-    }
-  }
-}
-
 
 // Function to set WiFi channel for sniffing
-void wifi_sniffer_set_channel(uint8_t channel) {
-
+void wifi_sniffer_set_channel(uint8_t channel)
+{
   numAddresses = 0;                              // Clear the number of addresses
   memset(macAddresses, 0, sizeof(macAddresses)); // Clear the list of mac addresses
 
   esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE); // Set the WiFi channel for sniffing
-  //sets the Wi-Fi channel for sniffing
 
   M5.Lcd.fillRect(0, 128, 300, 80, BLACK);
   M5.Lcd.setCursor(0, 128);
   M5.Lcd.printf("Current Channel: %d", channel); // Display current channel
-
 }
 
 // Function to convert WiFi packet type to string
-const char * wifi_sniffer_packet_type2str(wifi_promiscuous_pkt_type_t type) {
-
-  switch (type) { //checks the packet type
-    case WIFI_PKT_MGMT: return "MGMT";
-    case WIFI_PKT_DATA: return "DATA";
-    case WIFI_PKT_MISC: return "MISC";
-    default:
+const char *wifi_sniffer_packet_type2str(wifi_promiscuous_pkt_type_t type)
+{
+  switch (type)
+  {
+  case WIFI_PKT_MGMT:
+    return "MGMT";
+  case WIFI_PKT_DATA:
+    return "DATA";
+  case WIFI_PKT_MISC:
     return "MISC";
-
+  default:
+    return "UNKNOWN";
   }
 }
 
 // Callback function for WiFi packet handling
-void wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type) {
+void wifi_sniffer_packet_handler(void *buff, wifi_promiscuous_pkt_type_t type)
+{
 
-  if (enablePacketHandling) {
+  const wifi_promiscuous_pkt_t *ppkt = (wifi_promiscuous_pkt_t *)buff;            // Get the WiFi packet
+  const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)ppkt->payload; // Get the IEEE80211 packet
 
-    const wifi_promiscuous_pkt_t *ppkt = (wifi_promiscuous_pkt_t *)buff;
+  const wifi_ieee80211_mac_hdr_t *hdr = &ipkt->hdr;
 
-    const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)ppkt->payload;
+  char mac1[18];
+  sprintf(mac1, "%02X:%02X:%02X:%02X:%02X:%02X", hdr->addr1[0], hdr->addr1[1], hdr->addr1[2], hdr->addr1[3], hdr->addr1[4], hdr->addr1[5]);
 
-    const wifi_ieee80211_mac_hdr_t *hdr = &ipkt->hdr;
-    
-    char macAddress[18];
-    sprintf(macAddress, "%02X:%02X:%02X:%02X:%02X:%02X", hdr->addr2[0], hdr->addr2[1], hdr->addr2[2], hdr->addr2[3], hdr->addr2[4], hdr->addr2[5]);
-    
-    int rssi = ppkt->rx_ctrl.rssi;
-    
-    char payload[100];
-    sprintf(payload, "{\"channel\":%d,\"mac\":\"%s\",\"rssi\":%d}", channel, macAddress, rssi);
+  char mac2[18];
+  sprintf(mac2, "%02X:%02X:%02X:%02X:%02X:%02X", hdr->addr2[0], hdr->addr2[1], hdr->addr2[2], hdr->addr2[3], hdr->addr2[4], hdr->addr2[5]);
 
-    if (strlen(data) != 0) {
-      strcat(data, ",");
+  /**/ // COMMENT THIS SECTION FOR NO FILTERING. NOT RECOMMENDED!!!! DEVICE RUNNING OUT OF MEMORY
+  for (int i = 0; i < numAddresses; i++)
+  {
+    // if (strcmp(mac1, macAddresses[i]) == 0 || strcmp(mac2, macAddresses[i]) == 0) // STRICT FILTER. MOST PACKETS ARE LOST AND ONLY SOME USERS ARE SHOWN. MOST READABLE. FOR TESTING PURPOSES ONLY
+    if (strcmp(mac2, macAddresses[i]) == 0) // SOFT FILTER. MOST PACKETS ARE LOST, BUT ALL CLIENTS ARE SHOWN. REOMMENDED MODE.
+    {
+      return; // Skip duplicate MAC addresses
     }
+  }
+  /**/ // NO FILTERING
 
-    strcpy(data, payload);
+  // Create a JSON object for the MAC address
+  //JsonArray macArray = jsonDocument.createNestedArray();
+  JsonObject macObject = jsonDocument.createNestedObject();
+  macObject["mac"] = mac2;
+  macObject["channel"] = ppkt->rx_ctrl.channel;
+  macObject["rssi"] = ppkt->rx_ctrl.rssi;
 
-    i = i+1;
-    
-    Serial.printf("Channel: %d, MAC: %s, RSSI: %d\n", channel, macAddress, rssi);
-    Serial.println(i);
+  strcpy(macAddresses[numAddresses], mac1); // Store the RX MAC address
+  numAddresses++;
+  strcpy(macAddresses[numAddresses], mac2); // Store the TX MAC address
+  numAddresses++;
+
+  static int line = 0;
+  M5.Lcd.setCursor(0, line * 8);
+  M5.Lcd.printf("A1RX:%s CH:%d RSSI:%ddBm\n", mac1, ppkt->rx_ctrl.channel, ppkt->rx_ctrl.rssi); // Display MAC address, channel, and signal level
+  line++;
+
+  M5.Lcd.setCursor(0, line * 8);
+  M5.Lcd.printf("A2TX:%s CH:%d RSSI:%ddBm\n", mac2, ppkt->rx_ctrl.channel, ppkt->rx_ctrl.rssi); // Display MAC address, channel, and signal level
+  line++;
+
+  if (line >= 16)
+  {
+    M5.Lcd.fillScreen(BLACK); // Clear the screen if it exceeds 16 lines
+    M5.Lcd.fillRect(0, 128, 300, 80, BLACK);
+    M5.Lcd.setCursor(0, 128);
+    M5.Lcd.printf("Current Channel: %d", channel); // Display current channel
+    line = 0;
   }
 }
 
-
-void callback(char* topic, byte* payload, unsigned int length) {
-  // Handle incoming messages here
+void start_Scan_Wifi()
+{
+  esp_wifi_stop();
+  esp_wifi_start();
+  esp_wifi_set_promiscuous(true);
+  wifi_sniffer_init();
 }
 
-void setup() {
-  // put your setup code here, to run once:
-  M5.begin();                 // Initialize the M5StickC Plus
-  M5.Lcd.setRotation(1);      // Set the LCD rotation
-  M5.Lcd.fillScreen(BLACK);   // Fill the screen with black color
-  M5.Lcd.setTextColor(GREEN); // Set the text color to green
-  M5.Lcd.setTextSize(1);
-  M5.Lcd.setCursor(0, 128);
-  // LCD display print
-  M5.Lcd.printf("HOLA:%2.1f%%", 2.3);
-  M5.Lcd.print("Wifi Sniffer\n Init...\n\n");
+void end_Scan_Wifi()
+{
+  esp_wifi_set_promiscuous(false);
+  esp_wifi_stop();
+}
 
-  Serial.begin(115200); // Initialize the Serial communication
+bool setup_wifi()
+{
+  int retries = 0;
+  const int maxRetries = 2; // Maximum number of connection retries
 
-  WiFi.begin(ssid, password);
+  // Connect to AP
+  M5.Lcd.fillScreen(BLACK); // Fill the screen with black color
+  M5.Lcd.setCursor(0, 8);
+  esp_wifi_start();
+  M5.Lcd.println("Connecting to AP...");
+  M5.Lcd.println(apWifiName);
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    M5.Lcd.print(WiFi.status()); // Needs to print 3
+  while (retries <= maxRetries)
+  {
+    WiFi.begin(apWifiName, wifiInitialApPassword);
+    uint32_t connectStartTime = millis();
+
+    while (WiFi.status() != WL_CONNECTED && (millis() - connectStartTime) < 5000)
+    {
+      delay(750);
+      M5.Lcd.print(".");
+    }
+    esp_task_wdt_add(NULL);
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      delay(1000);
+      M5.Lcd.println("\nConnected to AP!");
+      M5.Lcd.println("IP address: ");
+      delay(3000);
+      M5.Lcd.println(WiFi.localIP());
+      return true; // Connection successful, return true
+    }
+    else
+    {
+      M5.Lcd.println("\nConnection failed. Retrying...");
+      retries++;
+    }
   }
 
-  M5.Lcd.printf("");
-  M5.Lcd.printf("WiFi connected");
-  M5.Lcd.printf("IP address: ");
-  Serial.println(WiFi.localIP());
+  M5.Lcd.println("\nFailed to connect to AP.");
+  delay(2000);
+  return false; // Connection failed, return false
+}
 
-  mqttClient.setServer(mqttServer, mqttPort);
-  mqttClient.setCallback(callback);
+void MQTT_Server()
+{
+  setup_wifi();
+  client.setServer(mqttServerValue, mqttServerPortValue);
+  client.connect(WiFi.macAddress().c_str(), mqttUserNameValue, mqttUserPasswordValue);
+  M5.Lcd.println("Starting MQTT...");
+  if (client.connected())
+  {
+    M5.Lcd.println("MQTT Connected");
+
+    //// Remote Control
+    client.setCallback(handleMqttMessage);
+    client.subscribe(mqttRebootTopic, 1);
+    delay(2000);
+    String jsonString;
+    serializeJson(jsonDocument, jsonString);
+    // Serial.println(jsonString);
+    client.setBufferSize(8192);
+    client.publish(mqttTopicValue, jsonString.c_str(),true);
+    size_t jsonSize = measureJson(jsonDocument);
+    // Print the size of the JSON object in bytes
+    M5.Lcd.println("JSON size (bytes): ");
+    M5.Lcd.println(jsonSize);
+    int numNestedObjects = jsonDocument.size();
+    M5.Lcd.println("Number of nested objects: ");
+    M5.Lcd.println(numNestedObjects);
+    delay(1000);
+    M5.Lcd.println("MQTT published!");
+  }
+
+  unsigned long tinicial;
+  tinicial = millis();
+  while ((millis() - tinicial) < 4000)
+  {
+    client.loop();
+  }
+  if ((millis() - tinicial) >= 4000)
+  {
+    client.disconnect();
+    M5.Lcd.println("MQTT Disconnected!");
+    delay(2000);
+    M5.Lcd.fillScreen(BLACK);
+  }
+}
+
+///////// CODE FOR THE REBOOT BUTTON
+const int BUTTON_PIN = 37;      // GPIO pin number for the button
+const int HOLD_DURATION = 3000; // Duration in milliseconds to consider a long press
+
+unsigned long buttonPressStartTime = 0;
+bool buttonPressed = false;
+
+void reboot()
+{
+  esp_restart();
+}
+
+void checkButton()
+{
+  if (digitalRead(BUTTON_PIN) == LOW)
+  {
+    // Button is pressed
+    if (!buttonPressed)
+    {
+      buttonPressStartTime = millis();
+      buttonPressed = true;
+    }
+  }
+  else
+  {
+    // Button is released
+    if (buttonPressed)
+    {
+      unsigned long buttonPressDuration = millis() - buttonPressStartTime;
+      if (buttonPressDuration >= HOLD_DURATION)
+      {
+        reboot(); // Perform the reboot if the button was held for the specified duration
+      }
+      buttonPressed = false;
+    }
+  }
+}
+////////////////////////////////////
+
+////// CODE FOR THE BACKLIGHT BUTTON
+
+void toggleLcd()
+{
+  if (lcdOn)
+  {
+    M5.Axp.ScreenBreath(7); // Set the backlight to 0 to turn off the LCD screen
+    lcdOn = false;
+  }
+  else
+  {
+    M5.Axp.ScreenBreath(15); // Set a non-zero backlight value to turn on the LCD screen
+    lcdOn = true;
+  }
+}
+
+////////////////////////////////
+
+////// MQTT CALLBACK FUNTION
+
+void handleMqttMessage(char *topic, uint8_t *payload, unsigned int length)
+{
+  // Convert the payload to a string
+  String message;
+  for (int i = 0; i < length; i++)
+  {
+    message += (char)payload[i];
+  }
+
+  // Check if the received topic is the reboot command topic
+  if (String(topic) == mqttRebootTopic)
+  {
+    // Check if the received message is the reboot command
+    if (message == mqttRebootCommand)
+    {
+      // Call the reboot function
+      M5.Lcd.fillScreen(BLACK);
+      M5.Lcd.setCursor(0, 8);
+      M5.Lcd.println("Control Message Received");
+      M5.Lcd.println(message.c_str());
+      delay(5000);
+      reboot();
+    }
+  }
+}
+
+///////////////////
+
+void setup()
+{
+  M5.begin();                           // Initialize the M5StickC Plus
+  esp_task_wdt_init(WDT_TIMEOUT, true); // Initialize the Watchdog Timer
+  M5.Axp.ScreenBreath(7);               // Set the backlight to 0 to turn off the LCD screen
+  M5.Lcd.setRotation(1);                // Set the LCD rotation
+  M5.Lcd.fillScreen(BLACK);             // Fill the screen with black color
+  M5.Lcd.setTextColor(GREEN);           // Set the text color to green
+  M5.Lcd.setTextSize(1);                // Set the text size
+
+  // Serial.begin(115200); // Initialize the Serial communication
+
+  pinMode(BUTTON_PIN, INPUT_PULLUP); // Initialize reboot button
 
   wifi_sniffer_init(); // Initialize the WiFi sniffer
-  M5.Lcd.print("Wifi Sniffer\n Running...");
 
-  // LCD display print
+  M5.Lcd.setCursor(0, 128);
   M5.Lcd.printf("Current Channel: %d", channel); // Display current channel
-
 }
 
-void loop() {
-  if (i >= 10){
-    Serial.println("Entré al if");
-    // Booleano para que si encuentra un paquete no haga nada hasta tener la configuración necesaria.
-    
-    enablePacketHandling = false;
-    //Desactivar la configuración anterior para poder concectarse a MQTT
-    tcpip_adapter_init();
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
-    ESP_ERROR_CHECK( esp_wifi_start() );
+void loop()
+{
 
-    Serial.println("Procedo a conectar");
+  esp_task_wdt_reset(); // Reset the Watchdog Timer
 
-    connectToWiFi();
-    connectToMQTT();
-    
-    Serial.println("Hasta aquí llego");
-    char mqttTopic[70];
-    sprintf(mqttTopic, "aps2023/Proyecto7/%llu/datos%d", chipId, j);
-    Serial.println(mqttTopic);
-    j = j+1;
+  checkButton();
 
-    mqttClient.publish(mqttTopic, data);
-    Serial.println(data);
-    
-    char data[1000];
-    Serial.println(data);
-    i = 0;
+  M5.update();
 
-    delay(5000);
-    Serial.println(data);
-    // Start sniffer again
-    tcpip_adapter_init();
-
-    cfg = WIFI_INIT_CONFIG_DEFAULT();
-
-    ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
-
-    ESP_ERROR_CHECK( esp_wifi_set_country(&wifi_country) ); // set country for channel range [1, 13]
-
-    ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
-
-    ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_NULL) );
-
-    ESP_ERROR_CHECK( esp_wifi_start() );
-
-    esp_wifi_set_promiscuous(true);
-    
-    enablePacketHandling = true;
-
+  if (M5.BtnB.wasPressed())
+  {
+    toggleLcd(); // Call the toggleLcd() function when the secondary button is pressed
   }
 
-  // Comprobar el temporizador para el retraso
-  unsigned long tiempoActual = xTaskGetTickCount();
-  if (tiempoActual - tiempoInicio >= tiempoEspera) {
-    // Acciones a realizar después de transcurrido el tiempo de espera
-    wifi_sniffer_set_channel(channel);
+  vTaskDelay(WIFI_CHANNEL_SWITCH_INTERVAL / portTICK_PERIOD_MS);
+  channel++;
 
-    channel = (channel % WIFI_CHANNEL_MAX) + 1;
-    
-    // Reiniciar el temporizador
-    tiempoInicio = xTaskGetTickCount();
+  if (channel > WIFI_CHANNEL_MAX)
+  {
+    // Serialize the JSON array to a string
+    end_Scan_Wifi(); // Disable promiscuous mode;
+
+    if (setup_wifi())
+    {
+      MQTT_Server();
+    }
+
+    M5.Lcd.fillScreen(BLACK);
+    start_Scan_Wifi();
+
+    channel = 1;
   }
 
+  wifi_sniffer_set_channel(channel);
 }
-
