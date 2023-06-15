@@ -10,12 +10,14 @@
 // Constants
 #define WIFI_CHANNEL_SWITCH_INTERVAL (15000) // Interval between channel switches (in milliseconds)
 #define WIFI_CHANNEL_MAX (13)                // Maximum WiFi channel number
-#define MAX_MAC_ADDRESSES (100)
+#define MAX_MAC_ADDRESSES (250)
 
 static uint8_t numAddresses = 0;
 static char macAddresses[MAX_MAC_ADDRESSES][18];  // Array to store MAC addresses
 static uint8_t channelNumbers[MAX_MAC_ADDRESSES]; // Array to store channel numbers
 static int8_t signalLevels[MAX_MAC_ADDRESSES];    // Array to store signal levels
+
+DynamicJsonDocument jsonDocument(JSON_OBJECT_SIZE(1) + MAX_MAC_ADDRESSES * JSON_OBJECT_SIZE(3));
 
 uint8_t level = 0, channel = 1;
 
@@ -132,7 +134,8 @@ void wifi_sniffer_packet_handler(void *buff, wifi_promiscuous_pkt_type_t type)
   }
   /**/ // NO FILTERING
 
-  JsonObject macObject = jsonDocument.createNestedObject();
+  JsonArray macArray = jsonDocument.createNestedArray(); // FIXME
+  JsonObject macObject = macArray.createNestedObject();
   macObject["mac"] = mac2;
   macObject["channel"] = ppkt->rx_ctrl.channel;
   macObject["rssi"] = ppkt->rx_ctrl.rssi;
