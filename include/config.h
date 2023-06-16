@@ -3,8 +3,8 @@
 
 #define STRING_LEN 128
 //-- datos wifi ap configuración
-const char apWifiName[] = "Redmi Note 12";
-const char wifiInitialApPassword[] = "ad2fd34037a6";
+const char apWifiName[] = "XXXXXXXXXXXXXXXXXXXXXX";
+const char wifiInitialApPassword[] = "XXXXXXXXXXXXXXXXXXXXXX";
 //-- VARIABLES DE LOS PARAMETROS A CONFIGURAR
 char mqttServerValue[STRING_LEN] = "aps2023.is-a-student.com";
 const int mqttServerPortValue = 2883;
