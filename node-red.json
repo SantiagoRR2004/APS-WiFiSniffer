@@ -39,7 +39,7 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "INSERT INTO devices(mac,id_m5,potencia) values(\"46-1B-74-52-E9-D4\",1,-69) ON DUPLICATE KEY UPDATE mac=\"46-1B-74-52-E9-D4\";",
-        "x": 280,
+        "x": 240,
         "y": 520,
         "wires": [
             [
@@ -52,7 +52,7 @@
         "type": "function",
         "z": "3997621668a57e4e",
         "name": "function1",
-        "func": "var sql = \"INSERT INTO devices(mac, id_m5, potencia) values('\" + msg.mac + \"',\" + msg.m5id + \",\" + msg.db + \") ON DUPLICATE KEY UPDATE mac = '\" + msg.mac+\"';\";\nmsg.topic=sql;\nreturn msg;",
+        "func": "var sql = \"INSERT INTO devices(mac, id_m5, channel, potencia) values('\" + msg.mac + \"',\" + msg.m5id + \",\" + msg.channel + \",\" + msg.db + \") ON DUPLICATE KEY UPDATE mac = '\" + msg.mac+\"';\";\nmsg.topic=sql;\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -82,7 +82,7 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "SELECT COUNT(*) FROM devices WHERE id_m5=1",
-        "x": 180,
+        "x": 240,
         "y": 580,
         "wires": [
             [
@@ -95,7 +95,7 @@
         "type": "debug",
         "z": "3997621668a57e4e",
         "name": "debug 54",
-        "active": true,
+        "active": false,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -134,7 +134,7 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "",
-        "x": 170,
+        "x": 210,
         "y": 460,
         "wires": [
             [
@@ -158,8 +158,8 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "SELECT id_m5,COUNT(*) FROM devices group by id_m5",
-        "x": 200,
-        "y": 640,
+        "x": 220,
+        "y": 620,
         "wires": [
             [
                 "61e3b15a79e1e75e"
@@ -179,12 +179,13 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 190,
-        "y": 140,
+        "x": 270,
+        "y": 60,
         "wires": [
             [
                 "9e0d788379f5b065",
-                "d2743131dee159ef"
+                "d2743131dee159ef",
+                "7950ea7cdb40b98c"
             ]
         ]
     },
@@ -197,11 +198,12 @@
         "tosidebar": true,
         "console": false,
         "tostatus": false,
-        "complete": "false",
+        "complete": "true",
+        "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 560,
-        "y": 40,
+        "x": 240,
+        "y": 240,
         "wires": []
     },
     {
@@ -216,7 +218,7 @@
         "finalize": "",
         "libs": [],
         "x": 840,
-        "y": 140,
+        "y": 160,
         "wires": [
             [
                 "39fd7057efb0cbc2",
@@ -229,7 +231,7 @@
         "type": "debug",
         "z": "3997621668a57e4e",
         "name": "debug 57",
-        "active": true,
+        "active": false,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -237,8 +239,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 980,
-        "y": 40,
+        "x": 960,
+        "y": 60,
         "wires": []
     },
     {
@@ -301,7 +303,7 @@
         "type": "debug",
         "z": "3997621668a57e4e",
         "name": "debug 58",
-        "active": true,
+        "active": false,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -312,6 +314,40 @@
         "x": 780,
         "y": 40,
         "wires": []
+    },
+    {
+        "id": "e3db9d60e991f906",
+        "type": "e-mail",
+        "z": "3997621668a57e4e",
+        "server": "mail.innebo.es",
+        "port": "25",
+        "authtype": "BASIC",
+        "saslformat": true,
+        "token": "oauth2Response.access_token",
+        "secure": false,
+        "tls": false,
+        "name": "lcanlemh4x@gmail.com",
+        "dname": "",
+        "x": 330,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "7950ea7cdb40b98c",
+        "type": "function",
+        "z": "3997621668a57e4e",
+        "name": "function 14",
+        "func": "\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 130,
+        "y": 160,
+        "wires": [
+            []
+        ]
     },
     {
         "id": "0d47e059107c05dd",
