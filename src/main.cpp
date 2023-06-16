@@ -259,7 +259,7 @@ void MQTT_Server()
     // Serial.println(jsonString);
     client.setBufferSize(8192);
     char mqttTopic[100];
-    sprintf(mqttTopic,"aps2023/Proyecto7/%llu",chipId);
+    sprintf(mqttTopic,"aps2023/Proyecto7/MAC_list/%llu",chipId);
     client.publish(mqttTopic, jsonString.c_str(),true);
     size_t jsonSize = measureJson(jsonDocument);
     // Print the size of the JSON object in bytes
