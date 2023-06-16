@@ -15,10 +15,12 @@
 #define WIFI_CHANNEL_MAX (13)               // Maximum WiFi channel number
 #define MAX_MAC_ADDRESSES (250)
 
+static uint64_t chipId = ESP.getEfuseMac(); //The chip ID
+
 #define WDT_TIMEOUT (59) // WatchDog Timeout in Seconds
 
 //// MQTT CONSTANTS
-const char *mqttRebootTopic = "aps2023/Proyecto7/remote_control/x"; // x = num_dispositivo
+char mqttRebootTopic[100];
 const char *mqttRebootCommand = "reboot";
 
 static uint8_t numAddresses = 0;
@@ -256,7 +258,9 @@ void MQTT_Server()
     serializeJson(jsonDocument, jsonString);
     // Serial.println(jsonString);
     client.setBufferSize(8192);
-    client.publish(mqttTopicValue, jsonString.c_str(),true);
+    char mqttTopic[100];
+    sprintf(mqttTopic,"aps2023/Proyecto7/%llu",chipId);
+    client.publish(mqttTopic, jsonString.c_str(),true);
     size_t jsonSize = measureJson(jsonDocument);
     // Print the size of the JSON object in bytes
     M5.Lcd.println("JSON size (bytes): ");
@@ -388,6 +392,10 @@ void setup()
 
   M5.Lcd.setCursor(0, 128);
   M5.Lcd.printf("Current Channel: %d", channel); // Display current channel
+
+  //We create the remote_control topic
+  sprintf(mqttRebootTopic, "aps2023/Proyecto7/remote_control/%llu", chipId);
+
 }
 
 void loop()

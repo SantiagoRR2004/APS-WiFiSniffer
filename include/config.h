@@ -10,7 +10,7 @@ char mqttServerValue[STRING_LEN] = "aps2023.is-a-student.com";
 const int mqttServerPortValue = 2883;
 char mqttUserNameValue[STRING_LEN] = "admin";
 char mqttUserPasswordValue[STRING_LEN] = "admin";
-char mqttTopicValue[STRING_LEN] = "aps2023/Proyecto7";
+char mqttTopicValue[STRING_LEN] = "aps2023/Proyecto7/";
 char mqttAutoSend[STRING_LEN];
 //-- CONFIGURACIÓN SERIAL PORT BASCULA
 char serial1Baudios[STRING_LEN] = "9600";
