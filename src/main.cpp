@@ -106,7 +106,7 @@ void wifi_sniffer_set_channel(uint8_t channel)
 
   M5.Lcd.fillRect(0, 128, 300, 80, BLACK);
   M5.Lcd.setCursor(0, 128);
-  M5.Lcd.printf("Current Channel: %d", channel); // Display current channel
+  M5.Lcd.printf("Canal actual: %d      ID: %llu", channel, chipId); // Display current channel
 }
 
 // Function to convert WiFi packet type to string
@@ -177,7 +177,7 @@ void wifi_sniffer_packet_handler(void *buff, wifi_promiscuous_pkt_type_t type)
     M5.Lcd.fillScreen(BLACK); // Clear the screen if it exceeds 16 lines
     M5.Lcd.fillRect(0, 128, 300, 80, BLACK);
     M5.Lcd.setCursor(0, 128);
-    M5.Lcd.printf("Current Channel: %d", channel); // Display current channel
+    M5.Lcd.printf("Canal actual: %d      ID: %llu", channel, chipId);// Display current channel
     line = 0;
   }
 }
@@ -205,7 +205,7 @@ bool setup_wifi()
   M5.Lcd.fillScreen(BLACK); // Fill the screen with black color
   M5.Lcd.setCursor(0, 8);
   esp_wifi_start();
-  M5.Lcd.println("Connecting to AP...");
+  M5.Lcd.println("Conectando al AP...");
   M5.Lcd.println(apWifiName);
 
   while (retries <= maxRetries)
@@ -222,20 +222,19 @@ bool setup_wifi()
     if (WiFi.status() == WL_CONNECTED)
     {
       delay(1000);
-      M5.Lcd.println("\nConnected to AP!");
-      M5.Lcd.println("IP address: ");
-      delay(3000);
-      M5.Lcd.println(WiFi.localIP());
+      M5.Lcd.println("\nConectado al AP!");
+      M5.Lcd.print("Direccion IP: ");
+      M5.Lcd.print(WiFi.localIP());
       return true; // Connection successful, return true
     }
     else
     {
-      M5.Lcd.println("\nConnection failed. Retrying...");
+      M5.Lcd.println("\nConexion fallida. Reintentando...");
       retries++;
     }
   }
 
-  M5.Lcd.println("\nFailed to connect to AP.");
+  M5.Lcd.println("\nConexion al AP fallida.");
   delay(2000);
   return false; // Connection failed, return false
 }
@@ -245,10 +244,10 @@ void MQTT_Server()
   setup_wifi();
   client.setServer(mqttServerValue, mqttServerPortValue);
   client.connect(WiFi.macAddress().c_str(), mqttUserNameValue, mqttUserPasswordValue);
-  M5.Lcd.println("Starting MQTT...");
+  M5.Lcd.println("\nIniciando MQTT...");
   if (client.connected())
   {
-    M5.Lcd.println("MQTT Connected");
+    M5.Lcd.println("MQTT Conectado");
 
     //// Remote Control
     client.setCallback(handleMqttMessage);
@@ -263,13 +262,13 @@ void MQTT_Server()
     client.publish(mqttTopic, jsonString.c_str(),true);
     size_t jsonSize = measureJson(jsonDocument);
     // Print the size of the JSON object in bytes
-    M5.Lcd.println("JSON size (bytes): ");
-    M5.Lcd.println(jsonSize);
+    M5.Lcd.print("JSON (bytes): ");
+    M5.Lcd.print(jsonSize);
     int numNestedObjects = jsonDocument.size();
-    M5.Lcd.println("Number of nested objects: ");
-    M5.Lcd.println(numNestedObjects);
+    M5.Lcd.print("\nNumero de objetos: ");
+    M5.Lcd.print(numNestedObjects);
     delay(1000);
-    M5.Lcd.println("MQTT published!");
+    M5.Lcd.println("\n\nMQTT publicado!");
   }
 
   unsigned long tinicial;
@@ -281,7 +280,7 @@ void MQTT_Server()
   if ((millis() - tinicial) >= 4000)
   {
     client.disconnect();
-    M5.Lcd.println("MQTT Disconnected!");
+    M5.Lcd.println("MQTT Desconectado!");
     delay(2000);
     M5.Lcd.fillScreen(BLACK);
   }
@@ -364,7 +363,7 @@ void handleMqttMessage(char *topic, uint8_t *payload, unsigned int length)
       // Call the reboot function
       M5.Lcd.fillScreen(BLACK);
       M5.Lcd.setCursor(0, 8);
-      M5.Lcd.println("Control Message Received");
+      M5.Lcd.println("Mensaje de control recibido!");
       M5.Lcd.println(message.c_str());
       delay(5000);
       reboot();
@@ -381,7 +380,7 @@ void setup()
   M5.Axp.ScreenBreath(7);               // Set the backlight to 0 to turn off the LCD screen
   M5.Lcd.setRotation(1);                // Set the LCD rotation
   M5.Lcd.fillScreen(BLACK);             // Fill the screen with black color
-  M5.Lcd.setTextColor(GREEN);           // Set the text color to green
+  M5.Lcd.setTextColor(MAGENTA);           // Set the text color to green
   M5.Lcd.setTextSize(1);                // Set the text size
 
   // Serial.begin(115200); // Initialize the Serial communication
@@ -391,7 +390,7 @@ void setup()
   wifi_sniffer_init(); // Initialize the WiFi sniffer
 
   M5.Lcd.setCursor(0, 128);
-  M5.Lcd.printf("Current Channel: %d", channel); // Display current channel
+  M5.Lcd.printf("Canal actual: %d      ID: %llu", channel, chipId); // Display current channel
 
   //We create the remote_control topic
   sprintf(mqttRebootTopic, "aps2023/Proyecto7/remote_control/%llu", chipId);
