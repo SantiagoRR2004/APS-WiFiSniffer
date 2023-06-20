@@ -187,7 +187,6 @@ void start_Scan_Wifi()
   esp_wifi_stop();
   esp_wifi_start();
   esp_wifi_set_promiscuous(true);
-  wifi_sniffer_init();
 }
 
 void end_Scan_Wifi()
@@ -268,6 +267,7 @@ void MQTT_Server()
     M5.Lcd.print("\nNumero de objetos: ");
     M5.Lcd.print(numNestedObjects);
     delay(1000);
+    jsonDocument.clear(); //Vaciar el archivo JSON
     M5.Lcd.println("\n\nMQTT publicado!");
   }
 
@@ -380,7 +380,7 @@ void setup()
   M5.Axp.ScreenBreath(7);               // Set the backlight to 0 to turn off the LCD screen
   M5.Lcd.setRotation(1);                // Set the LCD rotation
   M5.Lcd.fillScreen(BLACK);             // Fill the screen with black color
-  M5.Lcd.setTextColor(MAGENTA);           // Set the text color to green
+  M5.Lcd.setTextColor(RED);           // Set the text color to green
   M5.Lcd.setTextSize(1);                // Set the text size
 
   // Serial.begin(115200); // Initialize the Serial communication
