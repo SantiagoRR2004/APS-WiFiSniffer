@@ -6,7 +6,7 @@ This is a project for a subject called "Adquisición y Procesamiento de la Seña
 
 ## Project Summary
 
-For this project we had to choose between 8 different types of proyects. We chose the one that consisted in making a Wifi Sniffer with multiple M5StickC. These devices would detect the MAC address of devices that had their Wifi on and send them to a MQTT server. The server would then store the data in a MariaDB database with phpMyAdmin inside HomeAssistant. The data would be displayed in a Grafana and InfluxDB dashboard. The communication from inside the HomeAssistant was made with NodeRed. Finally, if the number of MAC addresses detected was greater than a number, a Telegram notification would be sent. This repository is only the code for the M5StickC.
+For this project we had to choose between 8 different types of proyects. We chose the one that consisted in making a Wifi Sniffer with multiple M5StickC. These devices would detect the MAC address of devices that had their Wifi on and send them to a MQTT server. The server would then store the data in a MariaDB database with phpMyAdmin inside HomeAssistant. The data would be displayed in a Grafana and InfluxDB dashboard. The communication from inside the HomeAssistant was made with NodeRed. Finally, if the number of MAC addresses detected was greater than a number, a Telegram notification and email would be sent. This repository is only the code for the M5StickC.
 
 ## Make it work
 
