@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Detect node-red as JavaScript
+node-red.json linguist-language=JavaScript linguist-detectable=true
