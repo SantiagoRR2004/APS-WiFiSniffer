@@ -1,0 +1,43 @@
+name: Formatting with Prettier
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+
+      - name: Install Prettier
+        run: |
+          npm install --global prettier
+
+      - name: Format files with Prettier
+        run: |
+          prettier --write . || true
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          if ! git diff --quiet; then
+            git add .
+            git commit -m "chore: Auto-format with Prettier [GitHub Action]"
+            git push
+          else
+            echo "No changes to push."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
